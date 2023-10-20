@@ -1,0 +1,97 @@
+terraform {
+  required_providers {
+    github = {
+      source  = "integrations/github"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "github" {
+  token = "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"
+  owner = "Practical-DevOps-GitHub"
+}
+
+resource "github_repository" "example" {
+  name          = "github-terraform-task-Bronsborought"
+  description   = "github-terraform-task-Bronsborought created by GitHub Classroom"
+  has_downloads = true
+  has_issues    = true
+  has_projects  = true
+  has_wiki      = true
+  
+  template {
+    include_all_branches = false
+    owner                = "Practical-DevOps-GitHub"
+    repository           = "github-terraform-task"
+  }
+}
+
+resource "github_repository_collaborator" "a_repo_collaborator" {
+  repository = github_repository.example.name
+  username   = "softservedata"
+  permission = "admin"
+}
+
+resource "github_branch" "develop" {
+  repository = github_repository.example.name
+  branch     = "develop"
+}
+
+resource "github_branch_default" "default"{
+  repository = github_repository.example.name
+  branch     = github_branch.develop.branch
+}
+
+resource "github_branch_protection" "main" {
+  repository_id = github_repository.example.node_id
+  pattern          = "main"
+  required_pull_request_reviews {
+    require_code_owner_reviews = true
+    required_approving_review_count = 0
+  }
+  }
+
+  resource "github_branch_protection" "develop" {
+  repository_id = github_repository.example.node_id
+  pattern          = github_branch.develop.branch
+  required_pull_request_reviews {
+    required_approving_review_count = 2
+  }
+  }
+
+  resource "github_repository_file" "foo" {
+  repository          = github_repository.example.name
+  branch              = "main"
+  file                = ".github/CODEOWNERS"
+  content             = "*       @softservedata"
+  commit_message      = "- added CODEOWNERS file"
+  overwrite_on_create = true
+}
+
+resource "github_repository_deploy_key" "example_repository_deploy_key" {
+  title      = "DEPLOY_KEY"
+  repository = github_repository.example.name
+  key        = "ssh-rsa ..."
+  read_only  = "false"
+}
+
+resource "github_repository_webhook" "foo" {
+  repository = github_repository.example.name
+
+  configuration {
+    url          = "https://discord.com/api/webhooks/../../github"
+    content_type = "json"
+    insecure_ssl = false
+  }
+
+  active = true
+
+  events = ["pull_request", "pull_request_review_comment", "pull_request_review", "pull_request_review_thread", "push"]
+}
+
+resource "github_actions_secret" "example_secret" {
+  repository       = github_repository.example.name
+  secret_name      = "PAT"
+  plaintext_value  = "...."
+}
